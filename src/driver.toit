@@ -1,3 +1,7 @@
+// Copyright (C) 2021 Alfred Stier <xal@quantentunnel.de>. All rights reserved.
+// Use of this source code is governed by a MIT-style license that can be found
+// in the LICENSE file.
+
 import binary show BIG_ENDIAN
 import serial
 import serial.protocols.i2c as i2c
@@ -20,11 +24,9 @@ class PCF8574:
   static I2C_ADDRESS_101 ::= 0x25
   static I2C_ADDRESS_110 ::= 0x26
   static I2C_ADDRESS_111 ::= 0x27
-  
-  _state := 0b00000000         // default to all OFF, after power on 
-  _stateL := [0,0,0,0,0,0,0,0]
-  _mask  := 0b11111111         // all PIns 
-  
+
+  _state := 0b00000000         // default to all OFF, after power on
+
   /** The alternate I2C address base for the PCF8574A  */
   static I2C_ADDRESS_ALT ::= 0x38
 
@@ -32,47 +34,96 @@ class PCF8574:
     _bytes := device_.read 1
     _state = _bytes[0] ^ 0b11111111
 
-  read:    // no filter, alway return array with 8 elements
+  /**
+  Reads the current state of the expander pins.
+  Returns a list of 8 values, where each value is either 0 or 1.
+  */
+  read -> List:
+    // No filter, alway returns an array with 8 elements.
     _bytes := device_.read 1
+    // Inverted result 1 = ON.
     _state = _bytes[0] ^ 0b11111111
-    return bin2list( _state )   // inverted result 1 = ON
 
-  set pin="ALL":      // pin = ALL sets all pin
-    _mask = validate_pin pin
-    _state = _state  | _mask 
-    device_.write #[( _state ^ 0b11111111 ) ]
-    return bin2list(_state )
-
-  clear pin="ALL":      // pin = pin number [0..7], ALL sets all pin
-    _mask = validate_pin pin
-    _state = _state & ( _mask ^ 0b11111111 )  
-    device_.write #[( _state ^ 0b11111111 ) ]
-    return bin2list(_state )
-  
-  validate_pin pin:   // pin valid range 0..7, ALL
-    if pin == "ALL":
-      return 0b11111111
-    else if pin <= 7 and pin >= 0:
-      return 1 << pin
-    else:
-      print "Invalid pin $pin. Use 0-7, or 'ALL'"
-      return 0b00000000
-    
-  toggle pin = "ALL":
-    _mask = validate_pin pin
-    _state = _state ^ _mask
-    device_.write #[(_state ^ 0b11111111 ) ]
-    return bin2list(_state)   // inverted result 1 = ON
-
-  bin2list value:   // take binary 8 bit and write to on/off array
+    result := List 8
+    state := _state
     8.repeat:
-      _stateL[it] = value%2
-      value = value >> 1
-    return _stateL
+      result[it] = state & 1
+      state >>= 1
+    return result
+
+  /** Sets all expander pins to 1. */
+  set:
+    set --mask=0b11111111
+
+  /**
+  Sets the given $pin to 1.
+  Other pins remain unaffected.
+  */
+  set --pin/int:
+    if not 0 <= pin < 8: throw "INVALID_PIN"
+    set --mask=(1 << pin)
+
+  /**
+  Sets the pins identified by the given $mask to 1.
+  Other pins remain unaffected.
+  */
+  set --mask/int:
+    if not 0 <= mask <= 0xFF: throw "INVALID_MASK"
+    _state |= mask
+    device_.write #[_state ^ 0b11111111]
+
+  /** Clears all expander pins, setting them to 0. */
+  clear:
+    clear --mask=0b11111111
+
+  /**
+  Clears the given $pin, setting it to 1.
+  Other pins remain unaffected.
+  */
+  clear --pin/int:
+    if not 0 <= pin < 8: throw "INVALID_PIN"
+    clear --mask=(1 << pin)
+
+  /**
+  Clears the pins identified by the given $mask, setting them to 0.
+  Other pins remain unaffected.
+  */
+  clear --mask/int:
+    if not 0 <= mask <= 0xFF: throw "INVALID_MASK"
+    _state &= mask ^ 0b11111111
+    device_.write #[_state ^ 0b11111111]
+
+  /**
+  Toggles all expander pins.
+  If a pin is 0, it becomes 1.
+  If a pin is 1, it becomes 0.
+  */
+  toggle:
+    toggle --mask=0b11111111
+
+  /**
+  Toggles the given $pin.
+  If the pin is 0, it becomes 1.
+  If the pin is 1, it becomes 0.
+  */
+  toggle --pin/int:
+    if not 0 <= pin < 8: throw "INVALID_PIN"
+    toggle --mask=(1 << pin)
+
+  /**
+  Toggles the pins identified by the given $mask.
+  If a pin is 0, it becomes 1.
+  If a pin is 1, it becomes 0.
+  Other pins remain unaffected.
+  */
+  toggle --mask/int:
+    if not 0 <= mask <= 0xFF: throw "INVALID_MASK"
+    _state ^= mask
+    device_.write #[_state ^ 0b11111111]
 
 
-      
-    
-     
-    
-    
+
+
+
+
+

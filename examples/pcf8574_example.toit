@@ -1,8 +1,14 @@
-//pcf8574 basic example
+// Copyright (C) 2021 Alfred Stier <xal@quantentunnel.de>. All rights reserved.
+// Use of this source code is governed by a Zero-Clause BSD license that can
+// be found in the EXAMPLES_LICENSE file.
+
+/**
+A basic example for the PCF8574.
+*/
 
 import gpio
 import serial.protocols.i2c as i2c
-import .driver show *
+import pcf8574 show *
 
 main:
   sda := gpio.Pin 22
@@ -12,21 +18,20 @@ main:
   device := bus.device PCF8574.I2C_ADDRESS_ALT
   pcf := PCF8574 device
 
-  ret := pcf.read        // reads status of all port and returns list
+  ret := pcf.read        // Reads status of all port and returns list.
   print "PCF read $ret"
 
-  pcf.set 2              // turn LED 2 on   ( range from 0..7 )
+  pcf.set --pin=2              // Turn LED 2 on   ( range from 0..7 ).
   sleep --ms=5000
 
-  pcf.set 6              // turn LED 6 on
+  pcf.set --pin=6              // Turn LED 6 on.
   sleep --ms=5000
 
-  pcf.clear              // no Pin parameter -> clear ALL
+  pcf.clear              // No Pin parameter -> clear all pins.
   sleep --ms=5000
 
-  pcf.set 6
+  pcf.set --pin=6
   sleep --ms=5000
 
-  pcf.toggle             // no Pin parameter -> toggle ALL
-  
-  
+  pcf.toggle             // No Pin parameter -> toggle all pins.
+
