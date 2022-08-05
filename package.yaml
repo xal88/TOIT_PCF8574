@@ -1,2 +1,3 @@
 # Toit Package File.
 name: pcf8574
+description: An i2c Toit driver for the PCF5874 and PCF5874A 8 channel I2C I/O expander.
